@@ -1,5 +1,6 @@
 <?php
     session_start();
+    include('../db.php');
 
     if(isset($_POST['submit'])) {
         $fullname = $_POST['fullname'];
@@ -30,6 +31,17 @@
             $errors[] = "Contact number must be 11 digits starting with 09.";
         }
 
+        // Check if email is already registered (only if email format itself is valid)
+        if(checkemail($email)) {
+            $email_safe = mysqli_real_escape_string($conn, $email);
+            $check_sql = "SELECT id FROM tblbuyers WHERE email = '$email_safe'";
+            $check_result = mysqli_query($conn, $check_sql);
+
+            if(mysqli_num_rows($check_result) > 0) {
+                $errors[] = "This email is already registered. Please use a different email or log in.";
+            }
+        }
+
         if(!empty($errors)) {
             $_SESSION['errors'] = $errors;
             $_SESSION['form_data'] = array(
@@ -41,11 +53,31 @@
             header('Location: ../register.php');
             exit();
         } else {
-            // TODO: Insert into database when DB is set up
-            $_SESSION['success'] = "Account created! You may now log in.";
-            header('Location: ../login.php');
-            exit();
+            // Hash the password before storing (built-in PHP function, not a framework)
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+            // Escape values before inserting
+            $fullname_safe = mysqli_real_escape_string($conn, $fullname);
+            $email_safe    = mysqli_real_escape_string($conn, $email);
+            $address_safe  = mysqli_real_escape_string($conn, $address);
+            $contact_safe  = mysqli_real_escape_string($conn, $contact);
+
+            $insert_sql = "INSERT INTO tblbuyers (fullname, email, password, address, contact)
+                           VALUES ('$fullname_safe', '$email_safe', '$hashed_password', '$address_safe', '$contact_safe')";
+
+            if(mysqli_query($conn, $insert_sql)) {
+                // TODO: Send confirmation email here once mailing is set up
+                $_SESSION['success'] = "Account created! You may now log in.";
+                header('Location: ../login.php');
+                exit();
+            } else {
+                $_SESSION['errors'] = array("Something went wrong while creating your account. Please try again.");
+                header('Location: ../register.php');
+                exit();
+            }
         }
+
+        mysqli_close($conn);
     }
 
     function checkname($name) {
