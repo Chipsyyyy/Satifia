@@ -2,6 +2,9 @@
     session_start();
     $title = "Home";
     $active_nav = "home";
+
+    include('db.php');
+
     include('include/header.php');
     include('include/navigation.php');
 ?>
@@ -42,7 +45,7 @@
         </div>
     </section>
 
-    <!-- FEATURED PRODUCTS (static placeholder, will connect to DB later) -->
+    <!-- FEATURED PRODUCTS (from database, latest 4) -->
     <section class="products-section">
         <div class="section-header">
             <p class="section-eyebrow">Featured</p>
@@ -50,31 +53,31 @@
         </div>
         <div class="product-grid">
             <?php
-            // PLACEHOLDER products — will be replaced with DB query later
-            $featured_products = array(
-                array("name" => "Linen Wrap Blouse", "category" => "Tops", "price" => "899.00"),
-                array("name" => "High-Waist Trousers", "category" => "Bottoms", "price" => "1,199.00"),
-                array("name" => "Midi Sundress", "category" => "Dresses", "price" => "1,499.00"),
-                array("name" => "Cropped Blazer", "category" => "Outerwear", "price" => "1,899.00"),
-            );
-            foreach($featured_products as $product):
+            $sql = "SELECT * FROM tblproducts ORDER BY id DESC LIMIT 4";
+            $result = mysqli_query($conn, $sql);
+            while($product = mysqli_fetch_assoc($result)):
             ?>
             <div class="product-card">
                 <div class="product-image">
-                    <span class="product-placeholder">Photo</span>
+                    <?php if(!empty($product['image']) && file_exists('images/' . $product['image'])): ?>
+                        <img src="images/<?= htmlspecialchars($product['image']); ?>" alt="<?= htmlspecialchars($product['name']); ?>">
+                    <?php else: ?>
+                        <span class="product-placeholder">Photo</span>
+                    <?php endif; ?>
                 </div>
                 <div class="product-info">
-                    <p class="product-category"><?= $product['category']; ?></p>
-                    <h3 class="product-name"><?= $product['name']; ?></h3>
-                    <p class="product-price">&#8369;<?= $product['price']; ?></p>
+                    <p class="product-category"><?= htmlspecialchars($product['category']); ?></p>
+                    <h3 class="product-name"><?= htmlspecialchars($product['name']); ?></h3>
+                    <p class="product-price">&#8369;<?= number_format($product['price'], 2); ?></p>
                 </div>
                 <form action="process/add_to_cart.php" method="post">
-                    <input type="hidden" name="product_name" value="<?= $product['name']; ?>">
+                    <input type="hidden" name="product_id"    value="<?= $product['id']; ?>">
+                    <input type="hidden" name="product_name"  value="<?= htmlspecialchars($product['name']); ?>">
                     <input type="hidden" name="product_price" value="<?= $product['price']; ?>">
                     <button type="submit" name="submit" class="product-add-btn">Add to Cart</button>
                 </form>
             </div>
-            <?php endforeach; ?>
+            <?php endwhile; ?>
         </div>
         <div style="text-align:center; margin-top: 40px;">
             <a href="store.php" class="btn-outline">View All Products</a>
@@ -91,4 +94,7 @@
 
 </div>
 
-<?php include('include/footer.php'); ?>
+<?php
+    mysqli_close($conn);
+    include('include/footer.php');
+?>

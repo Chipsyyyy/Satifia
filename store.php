@@ -39,7 +39,6 @@
 
         <!-- PRODUCT GRID -->
         <?php
-        // Build SQL query depending on the filter
         if($category == 'all') {
             $sql = "SELECT * FROM tblproducts ORDER BY id ASC";
         } else {
@@ -55,7 +54,11 @@
             <?php while($product = mysqli_fetch_assoc($result)): ?>
             <div class="product-card">
                 <div class="product-image">
-                    <span class="product-placeholder">Photo</span>
+                    <?php if(!empty($product['image']) && file_exists('images/' . $product['image'])): ?>
+                        <img src="images/<?= htmlspecialchars($product['image']); ?>" alt="<?= htmlspecialchars($product['name']); ?>">
+                    <?php else: ?>
+                        <span class="product-placeholder">Photo</span>
+                    <?php endif; ?>
                 </div>
                 <div class="product-info">
                     <p class="product-category"><?= htmlspecialchars($product['category']); ?></p>
