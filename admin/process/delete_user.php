@@ -18,10 +18,25 @@
             exit();
         }
 
+        // Get user fullname first for the audit log
+        $name_sql = "SELECT fullname FROM tbladmins WHERE id = '$user_id'";
+        $name_result = mysqli_query($conn, $name_sql);
+        $deleted_fullname = "";
+        if($name_row = mysqli_fetch_assoc($name_result)) {
+            $deleted_fullname = $name_row['fullname'];
+        }
+
         $sql = "DELETE FROM tbladmins WHERE id = '$user_id'";
 
         if(mysqli_query($conn, $sql)) {
             $_SESSION['admin_success'] = "User deleted successfully.";
+
+            // Log this action
+            $admin_id_safe   = (int) $_SESSION['admin_id'];
+            $admin_name_safe = mysqli_real_escape_string($conn, $_SESSION['admin_name']);
+            $log_action_safe = mysqli_real_escape_string($conn, "Deleted admin user: $deleted_fullname");
+            $log_sql = "INSERT INTO tblaudit_log (admin_id, admin_name, action) VALUES ('$admin_id_safe', '$admin_name_safe', '$log_action_safe')";
+            mysqli_query($conn, $log_sql);
         } else {
             $_SESSION['admin_error'] = "Could not delete user.";
         }

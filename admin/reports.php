@@ -10,30 +10,19 @@
     $admin_active = "reports";
     $css_path = "../css/style.css";
     $root_path = "../";
+
+    include('../db.php');
     include('../include/header.php');
 
-    // TODO: Replace with real DB queries
-    $inventory = array(
-        array("id"=>1,  "name"=>"Linen Wrap Blouse",    "category"=>"Tops",        "price"=>899.00,  "stock"=>15),
-        array("id"=>2,  "name"=>"Floral Button Shirt",  "category"=>"Tops",        "price"=>799.00,  "stock"=>20),
-        array("id"=>3,  "name"=>"Ribbed Tank Top",      "category"=>"Tops",        "price"=>499.00,  "stock"=>30),
-        array("id"=>4,  "name"=>"High-Waist Trousers",  "category"=>"Bottoms",     "price"=>1199.00, "stock"=>10),
-        array("id"=>5,  "name"=>"Pleated Midi Skirt",   "category"=>"Bottoms",     "price"=>999.00,  "stock"=>12),
-        array("id"=>6,  "name"=>"Wide-Leg Linen Pants", "category"=>"Bottoms",     "price"=>1099.00, "stock"=>8),
-        array("id"=>7,  "name"=>"Midi Sundress",        "category"=>"Dresses",     "price"=>1499.00, "stock"=>7),
-        array("id"=>8,  "name"=>"Wrap Maxi Dress",      "category"=>"Dresses",     "price"=>1699.00, "stock"=>5),
-        array("id"=>9,  "name"=>"Cropped Blazer",       "category"=>"Outerwear",   "price"=>1899.00, "stock"=>6),
-        array("id"=>10, "name"=>"Trench Coat",          "category"=>"Outerwear",   "price"=>2499.00, "stock"=>4),
-        array("id"=>11, "name"=>"Pearl Stud Earrings",  "category"=>"Accessories", "price"=>299.00,  "stock"=>50),
-        array("id"=>12, "name"=>"Canvas Tote Bag",      "category"=>"Accessories", "price"=>599.00,  "stock"=>25),
-    );
+    // 1. Inventory report - all products with current stock
+    $inv_sql = "SELECT * FROM tblproducts ORDER BY category ASC, name ASC";
+    $inv_result = mysqli_query($conn, $inv_sql);
+    $total_products = mysqli_num_rows($inv_result);
 
-    // Placeholder audit log
-    $audit_log = array(
-        array("time"=>"2025-06-01 09:00:00", "user"=>$_SESSION['admin_name'], "action"=>"Logged in"),
-        array("time"=>"2025-06-01 09:02:00", "user"=>$_SESSION['admin_name'], "action"=>"Viewed Products page"),
-        array("time"=>"2025-06-01 09:05:00", "user"=>$_SESSION['admin_name'], "action"=>"Viewed Reports page"),
-    );
+    // 2. Audit log - activities by the currently logged-in admin only
+    $current_admin_id = (int) $_SESSION['admin_id'];
+    $log_sql = "SELECT * FROM tblaudit_log WHERE admin_id = '$current_admin_id' ORDER BY date_created DESC LIMIT 50";
+    $log_result = mysqli_query($conn, $log_sql);
 ?>
 
 <div class="admin-layout">
@@ -45,7 +34,7 @@
 
         <!-- INVENTORY REPORT -->
         <div class="admin-card">
-            <p class="admin-card-title">Inventory Report</p>
+            <p class="admin-card-title">Inventory Report (<?= $total_products; ?> products)</p>
             <table class="admin-table">
                 <thead>
                     <tr>
@@ -58,27 +47,33 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach($inventory as $item): ?>
+                    <?php while($item = mysqli_fetch_assoc($inv_result)): ?>
                     <tr>
                         <td><?= $item['id']; ?></td>
-                        <td><?= $item['name']; ?></td>
-                        <td><?= $item['category']; ?></td>
+                        <td><?= htmlspecialchars($item['name']); ?></td>
+                        <td><?= htmlspecialchars($item['category']); ?></td>
                         <td>&#8369;<?= number_format($item['price'], 2); ?></td>
                         <td><?= $item['stock']; ?></td>
                         <td>
-                            <span class="badge <?= $item['stock'] > 0 ? 'badge-active' : 'badge-inactive'; ?>">
-                                <?= $item['stock'] > 0 ? 'In Stock' : 'Out of Stock'; ?>
-                            </span>
+                            <?php if($item['stock'] == 0): ?>
+                                <span class="badge badge-inactive">Out of Stock</span>
+                            <?php elseif($item['stock'] <= 5): ?>
+                                <span class="badge badge-staff">Low Stock</span>
+                            <?php else: ?>
+                                <span class="badge badge-active">In Stock</span>
+                            <?php endif; ?>
                         </td>
                     </tr>
-                    <?php endforeach; ?>
+                    <?php endwhile; ?>
                 </tbody>
             </table>
         </div>
 
         <!-- AUDIT LOG -->
         <div class="admin-card">
-            <p class="admin-card-title">Audit Log &mdash; Current Session (<?= htmlspecialchars($_SESSION['admin_name']); ?>)</p>
+            <p class="admin-card-title">Audit Log &mdash; Activities by <?= htmlspecialchars($_SESSION['admin_name']); ?></p>
+
+            <?php if(mysqli_num_rows($log_result) > 0): ?>
             <table class="admin-table">
                 <thead>
                     <tr>
@@ -88,21 +83,25 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach($audit_log as $log): ?>
+                    <?php while($log = mysqli_fetch_assoc($log_result)): ?>
                     <tr>
-                        <td><?= $log['time']; ?></td>
-                        <td><?= htmlspecialchars($log['user']); ?></td>
+                        <td><?= date('M d, Y - h:i A', strtotime($log['date_created'])); ?></td>
+                        <td><?= htmlspecialchars($log['admin_name']); ?></td>
                         <td><?= htmlspecialchars($log['action']); ?></td>
                     </tr>
-                    <?php endforeach; ?>
+                    <?php endwhile; ?>
                 </tbody>
             </table>
-            <p style="font-size:12px; color: var(--charcoal); margin-top:14px; font-style:italic;">
-                Note: Full audit logging will be implemented once the database is connected.
-            </p>
+            <?php else: ?>
+            <p style="font-size:13px; color: var(--charcoal); padding: 20px 0;">No activity recorded yet.</p>
+            <?php endif; ?>
+
         </div>
 
     </main>
 </div>
 
-<?php include('../include/footer.php'); ?>
+<?php
+    mysqli_close($conn);
+    include('../include/footer.php');
+?>

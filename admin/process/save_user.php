@@ -81,6 +81,14 @@
             $_SESSION['admin_success'] = $is_edit
                 ? "User \"$fullname\" updated successfully."
                 : "User \"$fullname\" added successfully.";
+
+            // Log this action
+            $admin_id_safe   = (int) $_SESSION['admin_id'];
+            $admin_name_safe = mysqli_real_escape_string($conn, $_SESSION['admin_name']);
+            $log_action      = $is_edit ? "Updated admin user: $fullname" : "Added new admin user: $fullname";
+            $log_action_safe = mysqli_real_escape_string($conn, $log_action);
+            $log_sql = "INSERT INTO tblaudit_log (admin_id, admin_name, action) VALUES ('$admin_id_safe', '$admin_name_safe', '$log_action_safe')";
+            mysqli_query($conn, $log_sql);
         } else {
             $_SESSION['admin_error'] = "Something went wrong. Please try again.";
         }
