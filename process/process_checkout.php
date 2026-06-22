@@ -1,5 +1,6 @@
 <?php
     session_start();
+    include('../db.php');
 
     if(!isset($_SESSION['buyer_id'])) {
         header('Location: ../login.php');
@@ -27,6 +28,12 @@
         }
 
         $cart = $_SESSION['cart'];
+
+        if(empty($cart)) {
+            header('Location: ../cart.php');
+            exit();
+        }
+
         $subtotal = 0;
         foreach($cart as $item) {
             $price = (float) str_replace(',', '', $item['price']);
@@ -42,18 +49,61 @@
         );
         $payment_label = isset($method_labels[$payment_method]) ? $method_labels[$payment_method] : $payment_method;
 
-        // TODO: Save order to DB here
+        // Escape values before inserting
+        $buyer_id_safe      = (int) $_SESSION['buyer_id'];
+        $recv_name_safe     = mysqli_real_escape_string($conn, $recv_name);
+        $recv_address_safe  = mysqli_real_escape_string($conn, $recv_address);
+        $recv_contact_safe  = mysqli_real_escape_string($conn, $recv_contact);
+        $recv_email_safe    = mysqli_real_escape_string($conn, $recv_email);
+        $payment_label_safe = mysqli_real_escape_string($conn, $payment_label);
+        $total_safe         = (float) $total;
 
-        $_SESSION['order_summary'] = array(
-            'order_number'   => strtoupper(substr(md5(time()), 0, 8)),
-            'items'          => $cart,
-            'total'          => $total,
-            'address'        => $recv_address,
-            'email'          => $recv_email,
-            'payment_method' => $payment_label
-        );
+        // 1. Insert into tblorders
+        $order_sql = "INSERT INTO tblorders (buyer_id, recipient_name, address, contact, email, payment_method, total)
+                      VALUES ('$buyer_id_safe', '$recv_name_safe', '$recv_address_safe', '$recv_contact_safe', '$recv_email_safe', '$payment_label_safe', '$total_safe')";
 
-        header('Location: ../payment.php');
-        exit();
+        if(mysqli_query($conn, $order_sql)) {
+
+            // Get the ID of the order we just inserted
+            $order_id = mysqli_insert_id($conn);
+
+            // 2. Insert each cart item into tblorder_items
+            foreach($cart as $item) {
+                $item_name_safe  = mysqli_real_escape_string($conn, $item['name']);
+                $item_price_safe = (float) str_replace(',', '', $item['price']);
+                $item_qty_safe   = (int) $item['qty'];
+
+                $item_sql = "INSERT INTO tblorder_items (order_id, product_name, price, qty)
+                             VALUES ('$order_id', '$item_name_safe', '$item_price_safe', '$item_qty_safe')";
+                mysqli_query($conn, $item_sql);
+
+                // 3. Deduct stock from tblproducts
+                if(!empty($item['id'])) {
+                    $product_id_safe = (int) $item['id'];
+                    $update_stock_sql = "UPDATE tblproducts SET stock = stock - '$item_qty_safe' WHERE id = '$product_id_safe' AND stock >= '$item_qty_safe'";
+                    mysqli_query($conn, $update_stock_sql);
+                }
+            }
+
+            // Store order summary for the confirmation page
+            $_SESSION['order_summary'] = array(
+                'order_number'   => 'ORD-' . str_pad($order_id, 6, '0', STR_PAD_LEFT),
+                'items'          => $cart,
+                'total'          => $total,
+                'address'        => $recv_address,
+                'email'          => $recv_email,
+                'payment_method' => $payment_label
+            );
+
+            mysqli_close($conn);
+            header('Location: ../payment.php');
+            exit();
+
+        } else {
+            $_SESSION['errors'] = array("Something went wrong while placing your order. Please try again.");
+            mysqli_close($conn);
+            header('Location: ../checkout.php');
+            exit();
+        }
     }
 ?>
