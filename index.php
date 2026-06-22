@@ -74,6 +74,7 @@
                     <input type="hidden" name="product_id"    value="<?= $product['id']; ?>">
                     <input type="hidden" name="product_name"  value="<?= htmlspecialchars($product['name']); ?>">
                     <input type="hidden" name="product_price" value="<?= $product['price']; ?>">
+                    <input type="hidden" name="product_image" value="<?= htmlspecialchars($product['image']); ?>">
                     <button type="submit" name="submit" class="product-add-btn">Add to Cart</button>
                 </form>
             </div>

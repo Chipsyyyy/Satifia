@@ -56,7 +56,13 @@
                         <tr>
                             <td>
                                 <div class="cart-product-info">
-                                    <div class="cart-product-img">Photo</div>
+                                    <div class="cart-product-img">
+                                        <?php if(!empty($item['image']) && file_exists('images/' . $item['image'])): ?>
+                                            <img src="images/<?= htmlspecialchars($item['image']); ?>" alt="<?= htmlspecialchars($item['name']); ?>" style="width:100%; height:100%; object-fit:cover;">
+                                        <?php else: ?>
+                                            Photo
+                                        <?php endif; ?>
+                                    </div>
                                     <div>
                                         <p class="cart-product-name"><?= htmlspecialchars($item['name']); ?></p>
                                         <p class="cart-product-cat">Satifia</p>
