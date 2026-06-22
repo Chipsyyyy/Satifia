@@ -6,14 +6,28 @@
         exit();
     }
 
+    include('../db.php');
+
     $is_edit = isset($_GET['id']);
     $title = $is_edit ? "Edit Admin User" : "Add Admin User";
     $admin_active = "users";
     $css_path = "../css/style.css";
     $root_path = "../";
 
-    // TODO: If editing, fetch user from DB
-    $user = array("id"=>"", "name"=>"", "username"=>"", "role"=>"Admin");
+    $user = array("id"=>"", "fullname"=>"", "username"=>"", "role"=>"Admin");
+
+    if($is_edit) {
+        $user_id = (int) $_GET['id'];
+        $sql = "SELECT * FROM tbladmins WHERE id = '$user_id'";
+        $result = mysqli_query($conn, $sql);
+
+        if(mysqli_num_rows($result) == 1) {
+            $user = mysqli_fetch_assoc($result);
+        } else {
+            header('Location: users.php');
+            exit();
+        }
+    }
 
     include('../include/header.php');
 ?>
@@ -43,8 +57,8 @@
 
                 <div class="form-group">
                     <label class="form-label">Full Name</label>
-                    <input type="text" class="form-control" name="name"
-                        value="<?= htmlspecialchars($user['name']); ?>" placeholder="e.g. Juan dela Cruz">
+                    <input type="text" class="form-control" name="fullname"
+                        value="<?= htmlspecialchars($user['fullname']); ?>" placeholder="e.g. Juan dela Cruz">
                 </div>
 
                 <div class="form-group">
@@ -56,8 +70,8 @@
                 <div class="form-group">
                     <label class="form-label">Role</label>
                     <select class="form-control" name="role">
-                        <option value="Admin"  <?= $user['role']=='Admin'  ? 'selected':''; ?>>Admin</option>
-                        <option value="Staff"  <?= $user['role']=='Staff'  ? 'selected':''; ?>>Staff</option>
+                        <option value="Admin" <?= $user['role']=='Admin' ? 'selected':''; ?>>Admin</option>
+                        <option value="Staff" <?= $user['role']=='Staff' ? 'selected':''; ?>>Staff</option>
                     </select>
                 </div>
 
@@ -85,4 +99,7 @@
     </main>
 </div>
 
-<?php include('../include/footer.php'); ?>
+<?php
+    mysqli_close($conn);
+    include('../include/footer.php');
+?>
