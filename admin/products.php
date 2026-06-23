@@ -10,23 +10,13 @@
     $admin_active = "products";
     $css_path = "../css/style.css";
     $root_path = "../";
+
+    include('../db.php');
     include('../include/header.php');
 
-    // TODO: Replace with DB query
-    $products = array(
-        array("id"=>1, "name"=>"Linen Wrap Blouse",    "category"=>"Tops",        "price"=>899.00,  "stock"=>15),
-        array("id"=>2, "name"=>"Floral Button Shirt",  "category"=>"Tops",        "price"=>799.00,  "stock"=>20),
-        array("id"=>3, "name"=>"Ribbed Tank Top",      "category"=>"Tops",        "price"=>499.00,  "stock"=>30),
-        array("id"=>4, "name"=>"High-Waist Trousers",  "category"=>"Bottoms",     "price"=>1199.00, "stock"=>10),
-        array("id"=>5, "name"=>"Pleated Midi Skirt",   "category"=>"Bottoms",     "price"=>999.00,  "stock"=>12),
-        array("id"=>6, "name"=>"Wide-Leg Linen Pants", "category"=>"Bottoms",     "price"=>1099.00, "stock"=>8),
-        array("id"=>7, "name"=>"Midi Sundress",        "category"=>"Dresses",     "price"=>1499.00, "stock"=>7),
-        array("id"=>8, "name"=>"Wrap Maxi Dress",      "category"=>"Dresses",     "price"=>1699.00, "stock"=>5),
-        array("id"=>9, "name"=>"Cropped Blazer",       "category"=>"Outerwear",   "price"=>1899.00, "stock"=>6),
-        array("id"=>10,"name"=>"Trench Coat",          "category"=>"Outerwear",   "price"=>2499.00, "stock"=>4),
-        array("id"=>11,"name"=>"Pearl Stud Earrings",  "category"=>"Accessories", "price"=>299.00,  "stock"=>50),
-        array("id"=>12,"name"=>"Canvas Tote Bag",      "category"=>"Accessories", "price"=>599.00,  "stock"=>25),
-    );
+    $sql = "SELECT * FROM tblproducts ORDER BY id ASC";
+    $result = mysqli_query($conn, $sql);
+    $total_products = mysqli_num_rows($result);
 ?>
 
 <div class="admin-layout">
@@ -42,8 +32,13 @@
             <?php unset($_SESSION['admin_success']); ?>
         <?php endif; ?>
 
+        <?php if(isset($_SESSION['admin_error'])): ?>
+            <div class="alert alert-danger"><p><?= $_SESSION['admin_error']; ?></p></div>
+            <?php unset($_SESSION['admin_error']); ?>
+        <?php endif; ?>
+
         <div class="admin-card">
-            <p class="admin-card-title">All Products (<?= count($products); ?>)</p>
+            <p class="admin-card-title">All Products (<?= $total_products; ?>)</p>
             <table class="admin-table">
                 <thead>
                     <tr>
@@ -57,11 +52,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach($products as $p): ?>
+                    <?php while($p = mysqli_fetch_assoc($result)): ?>
                     <tr>
                         <td><?= $p['id']; ?></td>
-                        <td><?= $p['name']; ?></td>
-                        <td><?= $p['category']; ?></td>
+                        <td><?= htmlspecialchars($p['name']); ?></td>
+                        <td><?= htmlspecialchars($p['category']); ?></td>
                         <td>&#8369;<?= number_format($p['price'], 2); ?></td>
                         <td><?= $p['stock']; ?></td>
                         <td>
@@ -79,11 +74,14 @@
                             </form>
                         </td>
                     </tr>
-                    <?php endforeach; ?>
+                    <?php endwhile; ?>
                 </tbody>
             </table>
         </div>
     </main>
 </div>
 
-<?php include('../include/footer.php'); ?>
+<?php
+    mysqli_close($conn);
+    include('../include/footer.php');
+?>
